@@ -1,6 +1,4 @@
 # Environment
-.env
-.env.local
 .env.*.local
 !.env.example
 
@@ -33,7 +31,6 @@ yarn-error.log*
 
 # IDE / OS
 .idea/
-.vscode/
 *.swp
 .DS_Store
 Thumbs.db
@@ -54,3 +51,7 @@ credentials.json
 service-account.json
 
 OpsPilot Guidelines.pdf
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat
