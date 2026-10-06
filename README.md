@@ -102,7 +102,7 @@ docker compose up --build
 |---|---|
 | Web console | http://localhost:3000 |
 | API + OpenAPI docs | http://localhost:8000/docs |
-| Postgres | `localhost:5432` |
+| Postgres | `localhost:5433` (Docker → container 5432) |
 | Redis | `localhost:6379` |
 
 ### 3. Run a demo incident

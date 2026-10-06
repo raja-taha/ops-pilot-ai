@@ -1,13 +1,22 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Resolve .env from repo root even when uvicorn cwd is apps/api
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_ENV_CANDIDATES = (
+    Path.cwd() / ".env",
+    _REPO_ROOT / ".env",
+    Path(__file__).resolve().parents[2] / ".env",  # apps/api/.env
+)
+_ENV_FILE = next((p for p in _ENV_CANDIDATES if p.is_file()), _REPO_ROOT / ".env")
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -22,11 +31,12 @@ class Settings(BaseSettings):
     api_key: str = "change-me-to-a-strong-secret"
     secret_key: str = "change-me-jwt-or-session-secret"
 
+    # Host port 5433 avoids clashing with a local Windows Postgres on 5432
     database_url: str = (
-        "postgresql+asyncpg://opspilot:opspilot@localhost:5432/opspilot"
+        "postgresql+asyncpg://opspilot:opspilot@localhost:5433/opspilot"
     )
     database_url_sync: str = (
-        "postgresql://opspilot:opspilot@localhost:5432/opspilot"
+        "postgresql://opspilot:opspilot@localhost:5433/opspilot"
     )
     redis_url: str = "redis://localhost:6379/0"
 
@@ -42,7 +52,8 @@ class Settings(BaseSettings):
     prometheus_url: str = "http://localhost:9090"
     loki_url: str = "http://localhost:3100"
 
-    otel_enabled: bool = True
+    otel_enabled: bool = False
+    otel_export_otlp: bool = False
     otel_service_name: str = "ops-pilot-api"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
 
