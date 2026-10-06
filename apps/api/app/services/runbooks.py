@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.runbook import RunbookChunk
@@ -164,58 +164,26 @@ async def retrieve_runbooks(
     service_name: str | None = None,
     top_k: int = 4,
 ) -> list[dict]:
+    """Rank runbook chunks with local cosine similarity (async-safe)."""
     query_vec = await embed_text(query)
-
-    # Prefer pgvector distance when available; fall back to Python cosine.
-    try:
-        sql = text(
-            """
-            SELECT id, service_name, title, section, content, tags,
-                   1 - (embedding <=> :emb) AS score
-            FROM runbook_chunks
-            WHERE (:service IS NULL OR service_name = :service)
-            ORDER BY embedding <=> :emb
-            LIMIT :k
-            """
-        )
-        rows = (
-            await session.execute(
-                sql,
-                {
-                    "emb": str(query_vec),
-                    "service": service_name,
-                    "k": top_k,
-                },
-            )
-        ).mappings().all()
-        if rows:
-            return [dict(r) for r in rows]
-    except Exception:
-        pass
-
     result = await session.execute(select(RunbookChunk))
     chunks = list(result.scalars().all())
     ranked: list[tuple[float, RunbookChunk]] = []
     for chunk in chunks:
-        if service_name and chunk.service_name != service_name:
-            # keep some cross-service context but downrank
-            service_boost = 0.0
-        else:
-            service_boost = 0.15
-        base = cosine_similarity(query_vec, chunk.embedding or local_embed(chunk.content))
+        service_boost = 0.15 if (not service_name or chunk.service_name == service_name) else 0.0
+        emb = chunk.embedding if chunk.embedding is not None else local_embed(chunk.content)
+        base = cosine_similarity(query_vec, list(emb))
         ranked.append((base + service_boost, chunk))
     ranked.sort(key=lambda x: x[0], reverse=True)
-    out = []
-    for score, chunk in ranked[:top_k]:
-        out.append(
-            {
-                "id": str(chunk.id),
-                "service_name": chunk.service_name,
-                "title": chunk.title,
-                "section": chunk.section,
-                "content": chunk.content,
-                "tags": chunk.tags,
-                "score": score,
-            }
-        )
-    return out
+    return [
+        {
+            "id": str(chunk.id),
+            "service_name": chunk.service_name,
+            "title": chunk.title,
+            "section": chunk.section,
+            "content": chunk.content,
+            "tags": chunk.tags,
+            "score": score,
+        }
+        for score, chunk in ranked[:top_k]
+    ]

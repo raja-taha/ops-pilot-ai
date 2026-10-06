@@ -58,7 +58,13 @@ class Incident(Base):
     service_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     severity: Mapped[str] = mapped_column(String(32), default="high")
     status: Mapped[IncidentStatus] = mapped_column(
-        Enum(IncidentStatus, name="incident_status"),
+        Enum(
+            IncidentStatus,
+            name="incident_status",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            native_enum=False,
+            length=32,
+        ),
         default=IncidentStatus.OPEN,
         index=True,
     )
@@ -129,7 +135,14 @@ class RemediationAction(Base):
         UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), index=True
     )
     action_type: Mapped[ActionType] = mapped_column(
-        Enum(ActionType, name="action_type"), nullable=False
+        Enum(
+            ActionType,
+            name="action_type",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            native_enum=False,
+            length=32,
+        ),
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -138,7 +151,13 @@ class RemediationAction(Base):
     rollback_plan: Mapped[str] = mapped_column(Text, nullable=False)
     risk_level: Mapped[str] = mapped_column(String(32), default="medium")
     status: Mapped[ActionStatus] = mapped_column(
-        Enum(ActionStatus, name="action_status"),
+        Enum(
+            ActionStatus,
+            name="action_status",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            native_enum=False,
+            length=32,
+        ),
         default=ActionStatus.PROPOSED,
         index=True,
     )

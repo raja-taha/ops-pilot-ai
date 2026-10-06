@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -97,10 +97,17 @@ async def investigate_existing(session: AsyncSession, incident_id: UUID) -> Inci
 
 
 async def _run_investigation(session: AsyncSession, incident: Incident) -> None:
-    # Clear previous agent artifacts if re-run
-    for collection in (incident.hypotheses, incident.actions, incident.timeline):
-        for item in list(collection):
-            await session.delete(item)
+    # Delete via SQL — never touch lazy-loaded relationships in async sessions
+    # (accessing incident.hypotheses triggers sync IO → MissingGreenlet).
+    await session.execute(
+        delete(Hypothesis).where(Hypothesis.incident_id == incident.id)
+    )
+    await session.execute(
+        delete(RemediationAction).where(RemediationAction.incident_id == incident.id)
+    )
+    await session.execute(
+        delete(TimelineEvent).where(TimelineEvent.incident_id == incident.id)
+    )
     await session.flush()
 
     state = await run_incident_agent(
@@ -178,16 +185,20 @@ async def _run_investigation(session: AsyncSession, incident: Incident) -> None:
     )
     await session.flush()
 
-    await set_incident_state(
-        incident.id,
-        {
-            "status": incident.status.value,
-            "root_cause": incident.root_cause,
-            "steps": state.get("trace", []),
-        },
-    )
-    for step in state.get("trace", []):
-        await append_trace_step(incident.id, step)
+    # Redis is best-effort — investigation must still succeed if Redis is down
+    try:
+        await set_incident_state(
+            incident.id,
+            {
+                "status": incident.status.value,
+                "root_cause": incident.root_cause,
+                "steps": state.get("trace", []),
+            },
+        )
+        for step in state.get("trace", []):
+            await append_trace_step(incident.id, step)
+    except Exception as exc:
+        logger.warning("redis_state_failed", error=str(exc), incident_id=str(incident.id))
 
     logger.info(
         "investigation_complete",
@@ -271,10 +282,13 @@ async def decide_action(
             )
         )
 
-    await set_incident_state(
-        incident.id,
-        {"status": incident.status.value, "last_action": str(action.id)},
-    )
+    try:
+        await set_incident_state(
+            incident.id,
+            {"status": incident.status.value, "last_action": str(action.id)},
+        )
+    except Exception as exc:
+        logger.warning("redis_state_failed", error=str(exc), incident_id=str(incident.id))
     await session.flush()
     return action, incident
 
