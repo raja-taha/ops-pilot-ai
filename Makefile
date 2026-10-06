@@ -1,10 +1,18 @@
-.PHONY: up down seed eval test api web
+.PHONY: up down venv install seed eval test api web
 
 up:
 	docker compose up --build
 
 down:
 	docker compose down
+
+# Create venv inside apps/api
+venv:
+	cd apps/api && python -m venv venv
+
+# Install API deps (activate apps/api/venv first)
+install:
+	cd apps/api && pip install -r requirements.txt
 
 seed:
 	python scripts/seed_demo.py payment-latency-spike

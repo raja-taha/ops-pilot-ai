@@ -80,8 +80,9 @@ python evals/run_eval.py
 
 ### Prerequisites
 
-- Docker + Docker Compose
-- (Optional) Node 20+ / Python 3.12+ for non-Docker workflows
+- Docker + Docker Compose (at least for Postgres + Redis)
+- Python 3.12+ with a `venv` inside `apps/api` for local API work
+- Node 20+ for the Next.js console
 - (Optional) `OPENAI_API_KEY` for live LLM mode
 
 ### 1. Configure environment
@@ -118,25 +119,30 @@ CLI alternative:
 python scripts/seed_demo.py payment-latency-spike
 ```
 
-### Without Docker (API only)
+### Without Docker (API + local venv)
 
-```bash
-# terminal 1 — infra
+Windows PowerShell:
+
+```powershell
+# terminal 1 — infra (from repo root)
 docker compose up db redis
 
 # terminal 2 — API
-cd apps/api
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+cd apps\api
+python -m venv venv
+.\venv\Scripts\activate
 pip install -r requirements.txt
 python -m app.db.seed
 uvicorn app.main:app --reload --port 8000
 
-# terminal 3 — web
-cd apps/web
+# terminal 3 — web (from repo root)
+cd apps\web
 npm install
 npm run dev
 ```
+
+Re-activate later from `apps\api` with `.\venv\Scripts\activate`.  
+macOS/Linux: `source venv/bin/activate`.
 
 ---
 
