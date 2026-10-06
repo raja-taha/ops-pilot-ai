@@ -1,0 +1,211 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-opsp-ilot0000001",
+    "name": "OpsPilot API",
+    "description": "OpsPilot — AI SRE Incident Commander.\n\nSet collection variables `baseUrl` and `apiKey` before running.\nTypical flow: Health → List Scenarios → Create Incident → Get Incident → Approve/Reject Action → Get Report.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "apiKey", "value": "change-me-to-a-strong-secret" },
+    { "key": "incidentId", "value": "" },
+    { "key": "actionId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scenarios",
+      "item": [
+        {
+          "name": "List Scenarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/scenarios"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Incidents",
+      "item": [
+        {
+          "name": "List Incidents",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/incidents"
+          }
+        },
+        {
+          "name": "Create Incident (Payment Latency)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('incidentId', data.id);",
+                  "  if (data.actions && data.actions.length) {",
+                  "    pm.collectionVariables.set('actionId', data.actions[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario_id\": \"payment-latency-spike\",\n  \"auto_investigate\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/incidents"
+          }
+        },
+        {
+          "name": "Create Incident (Auth Surge)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario_id\": \"auth-error-surge\",\n  \"auto_investigate\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/incidents"
+          }
+        },
+        {
+          "name": "Create Custom Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Custom latency alert\",\n  \"service_name\": \"payment-api\",\n  \"severity\": \"high\",\n  \"alert\": {\n    \"alertname\": \"HighP99Latency\",\n    \"service\": \"payment-api\",\n    \"current\": \"1800ms\"\n  },\n  \"auto_investigate\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/incidents"
+          }
+        },
+        {
+          "name": "Get Incident",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.actions && data.actions.length) {",
+                  "    const proposed = data.actions.find(a => a.status === 'proposed') || data.actions[0];",
+                  "    pm.collectionVariables.set('actionId', proposed.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/incidents/{{incidentId}}"
+          }
+        },
+        {
+          "name": "Re-investigate Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/incidents/{{incidentId}}/investigate"
+          }
+        },
+        {
+          "name": "Get Incident Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/incidents/{{incidentId}}/report"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approvals",
+      "item": [
+        {
+          "name": "Approve Remediation Action",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"decided_by\": \"oncall-engineer\",\n  \"notes\": \"Evidence score and timeline support rollback\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/incidents/{{incidentId}}/actions/{{actionId}}/decision"
+          }
+        },
+        {
+          "name": "Reject Remediation Action",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": false,\n  \"decided_by\": \"oncall-engineer\",\n  \"notes\": \"Need more evidence before write action\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/incidents/{{incidentId}}/actions/{{actionId}}/decision"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "metric": "root_cause_top1_accuracy",
+  "dataset_size": 8,
+  "correct": 8,
+  "accuracy": 1.0,
+  "avg_latency_ms": 1.95,
+  "results": [
+    {
+      "id": "payment-latency-spike",
+      "expected": "connection_pool_exhaustion_after_deploy",
+      "predicted": "connection_pool_exhaustion_after_deploy",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "auth-error-surge",
+      "expected": "jwt_secret_rotation_mismatch",
+      "predicted": "jwt_secret_rotation_mismatch",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "orders-oom",
+      "expected": "memory_leak_batch_exporter",
+      "predicted": "memory_leak_batch_exporter",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "checkout-dependency",
+      "expected": "inventory_latency_circuit_open",
+      "predicted": "inventory_latency_circuit_open",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "search-index-lag",
+      "expected": "kafka_consumer_lag_rebalance",
+      "predicted": "kafka_consumer_lag_rebalance",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "cdn-cache-miss",
+      "expected": "cache_purge_thundering_herd",
+      "predicted": "cache_purge_thundering_herd",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "notif-queue-backlog",
+      "expected": "smtp_rate_limit_queue_backlog",
+      "predicted": "smtp_rate_limit_queue_backlog",
+      "correct": true,
+      "evidence_score": 1.0
+    },
+    {
+      "id": "ml-feature-skew",
+      "expected": "feature_schema_drift",
+      "predicted": "feature_schema_drift",
+      "correct": true,
+      "evidence_score": 1.0
+    }
+  ]
+}

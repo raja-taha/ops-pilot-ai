@@ -1,0 +1,34 @@
+[
+  {
+    "id": "payment-latency-spike",
+    "expected_root_cause": "connection_pool_exhaustion_after_deploy"
+  },
+  {
+    "id": "auth-error-surge",
+    "expected_root_cause": "jwt_secret_rotation_mismatch"
+  },
+  {
+    "id": "orders-oom",
+    "expected_root_cause": "memory_leak_batch_exporter"
+  },
+  {
+    "id": "checkout-dependency",
+    "expected_root_cause": "inventory_latency_circuit_open"
+  },
+  {
+    "id": "search-index-lag",
+    "expected_root_cause": "kafka_consumer_lag_rebalance"
+  },
+  {
+    "id": "cdn-cache-miss",
+    "expected_root_cause": "cache_purge_thundering_herd"
+  },
+  {
+    "id": "notif-queue-backlog",
+    "expected_root_cause": "smtp_rate_limit_queue_backlog"
+  },
+  {
+    "id": "ml-feature-skew",
+    "expected_root_cause": "feature_schema_drift"
+  }
+]

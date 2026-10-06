@@ -1,0 +1,95 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: opspilot-db
+    environment:
+      POSTGRES_USER: opspilot
+      POSTGRES_PASSWORD: opspilot
+      POSTGRES_DB: opspilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - opspilot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opspilot -d opspilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: opspilot-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: opspilot-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://opspilot:opspilot@db:5432/opspilot
+      DATABASE_URL_SYNC: postgresql://opspilot:opspilot@db:5432/opspilot
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+      - ./evals:/evals:ro
+    command: >
+      sh -c "python -m app.db.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: opspilot-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://opspilot:opspilot@db:5432/opspilot
+      DATABASE_URL_SYNC: postgresql://opspilot:opspilot@db:5432/opspilot
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+      - ./services/worker:/worker
+    command: python /worker/main.py
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_KEY: ${API_KEY:-change-me-to-a-strong-secret}
+    container_name: opspilot-web
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_KEY: ${API_KEY:-change-me-to-a-strong-secret}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  opspilot_pgdata:
